@@ -2,9 +2,11 @@ package utreexo
 
 import "encoding/hex"
 
+// Hash is the type of a value (and of internal nodes) in a Utreexo.
 type Hash [32]byte
 
-var hashnames = map[string]string {
+// This is for testing.
+var hashnames = map[string]string{
 	"319efef47197950dc90dbcf48b897f7cb8553030da7d18416f0eb163da0e84a2": "A",
 	"6dfae426e23b27ae6c17c6b6fb6695306cf8895efc834527a75301f73276706a": "B",
 	"58b9355a5a8b84a33bf1db57a7b44f8b1effc91b194a9d1dc530a0a68ae768c6": "C",
@@ -34,8 +36,11 @@ func (h Hash) String() string {
 	return s
 }
 
+// HashFunc is the type of a function that produces a parent hash from two child hashes.
 type HashFunc func(Hash, Hash) Hash
 
+// Utreexo is a forest of perfectly full Merkle trees,
+// at most one of size 2^N for each N in 0..len(roots).
 type Utreexo struct {
 	roots  []*Hash
 	hasher func(Hash, Hash) Hash
@@ -52,12 +57,21 @@ type worktree struct {
 	roots   map[Hash]int // index in heights where a hash can be found
 }
 
+// Update is the output of Utreexo.Update.
+// It contains information that can be used to update proofs
+// (via Proof.Update)
+// after the Utreexo changes.
 type Update struct {
 	U       *Utreexo
 	Deleted map[Hash]bool
 	Updated map[Hash]ProofStep
 }
 
+// Update removes some values from a Utreexo and adds others.
+// All deletions happen before any insertions.
+// Each deletion is specified by a proof of inclusion.
+// If any proof is invalid, no changes at all are made.
+// The resulting object can be used in calls to Proof.Update to update proofs that may have been affected by the changes to the Utreexo.
 func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
 	w := &worktree{
 		roots:   make(map[Hash]int),
@@ -113,6 +127,13 @@ func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
 			update.Updated[a] = ProofStep{H: b, Left: false}
 			update.Updated[b] = ProofStep{H: a, Left: true}
 		}
+	}
+
+	for i := len(w.heights) - 1; i >= 0; i-- {
+		if w.heights[i] != nil {
+			break
+		}
+		w.heights = w.heights[:len(w.heights)-1]
 	}
 
 	for i, h := range w.heights {
@@ -185,6 +206,10 @@ func findRoot(root Hash, roots []Hash) (int, bool) {
 	return 0, false
 }
 
+// Proof produces the Proof for a newly added item after a call to Utreexo.Update.
+// If item is not one of items added in the call that produced this Update,
+// the resulting Proof will probably be invalid,
+// but there's a small chance it won't be.
 func (u Update) Proof(item Hash) Proof {
 	p := Proof{Leaf: item}
 	for {
