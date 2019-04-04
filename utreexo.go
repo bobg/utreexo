@@ -43,9 +43,10 @@ type HashFunc func(Hash, Hash) Hash
 // at most one of size 2^N for each N in 0..len(roots).
 type Utreexo struct {
 	roots  []*Hash
-	hasher func(Hash, Hash) Hash
+	hasher HashFunc
 }
 
+// New produces an empty Utreexo with the given hash function.
 func New(hasher HashFunc) *Utreexo {
 	return &Utreexo{
 		hasher: hasher,
@@ -71,7 +72,12 @@ type Update struct {
 // All deletions happen before any insertions.
 // Each deletion is specified by a proof of inclusion.
 // If any proof is invalid, no changes at all are made.
-// The resulting object can be used in calls to Proof.Update to update proofs that may have been affected by the changes to the Utreexo.
+// All insertions are presumed to be unique.
+// (Results are undefined if they're not.)
+// The Update object that results should be used to update proofs
+// (via Proof.Update)
+// that may have been affected by the changes to the Utreexo.
+// Note that this function never returns an error when len(deletions)==0.
 func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
 	w := &worktree{
 		roots:   make(map[Hash]int),

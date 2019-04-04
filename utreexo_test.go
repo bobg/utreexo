@@ -2,6 +2,7 @@ package utreexo
 
 import (
 	"crypto/sha256"
+	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -27,6 +28,11 @@ func TestUtreexo(t *testing.T) {
 		copy(result[:], hasher.Sum(nil))
 		return result
 	})
+
+	_, err := u.Update([]Proof{{Leaf: Hash{}}}, nil)
+	if err != ErrInvalid {
+		t.Errorf("got error %v, want %s", err, ErrInvalid)
+	}
 
 	upd, err := u.Update(nil, items[:11])
 	if err != nil {
@@ -57,8 +63,14 @@ func TestUtreexo(t *testing.T) {
 	t.Logf("after deletion of %s, tree:\n%s", proofs[10].Leaf, spew.Sdump(u))
 	t.Logf("proofs:\n%s", spew.Sdump(proofs[:10]))
 
+	saved := *u
+
 	_, err = u.Update([]Proof{proofs[10]}, nil)
 	if err != ErrInvalid {
 		t.Errorf("got error %v, want %s", err, ErrInvalid)
+	}
+
+	if !reflect.DeepEqual(saved.roots, u.roots) {
+		t.Error("utreexo changed during failed call to Update")
 	}
 }
