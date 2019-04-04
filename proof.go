@@ -12,7 +12,7 @@ type (
 	// Proof is a proof of inclusion for a given value.
 	Proof struct {
 		// Leaf is the value whose inclusion is being proven.
-		Leaf  Hash
+		Leaf Hash
 
 		// Steps is a sequence of ProofSteps, from the leaf towards the root.
 		Steps []ProofStep
@@ -29,7 +29,7 @@ var (
 
 // Update updates the proof of inclusion for a value after the Utreexo has been updated.
 func (p *Proof) Update(u Update) error {
-	if u.Deleted[p.Leaf] {
+	if u.deleted[p.Leaf] {
 		return ErrDeleted
 	}
 
@@ -39,12 +39,12 @@ func (p *Proof) Update(u Update) error {
 	defer func() { p.Steps = steps }()
 
 	for i := 0; i <= len(steps); i++ {
-		if len(u.U.roots) > i && u.U.roots[i] != nil && *u.U.roots[i] == h {
+		if len(u.u.roots) > i && u.u.roots[i] != nil && *u.u.roots[i] == h {
 			steps = steps[:i]
 			return nil
 		}
 		var step ProofStep
-		if s, ok := u.Updated[h]; ok {
+		if s, ok := u.updated[h]; ok {
 			step = s
 			steps = append(steps[:i], step)
 		} else if i == len(steps) {
@@ -53,9 +53,9 @@ func (p *Proof) Update(u Update) error {
 			step = steps[i]
 		}
 		if step.Left {
-			h = u.U.hasher(step.H, h)
+			h = u.u.hasher(step.H, h)
 		} else {
-			h = u.U.hasher(h, step.H)
+			h = u.u.hasher(h, step.H)
 		}
 	}
 

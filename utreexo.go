@@ -62,9 +62,9 @@ type worktree struct {
 // (via Proof.Update)
 // after the Utreexo changes.
 type Update struct {
-	U       *Utreexo
-	Deleted map[Hash]bool
-	Updated map[Hash]ProofStep
+	u       *Utreexo
+	deleted map[Hash]bool
+	updated map[Hash]ProofStep
 }
 
 // Update removes some values from a Utreexo and adds others.
@@ -85,13 +85,13 @@ func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
 	}
 
 	update := Update{
-		U:       u,
-		Deleted: make(map[Hash]bool),
-		Updated: make(map[Hash]ProofStep),
+		u:       u,
+		deleted: make(map[Hash]bool),
+		updated: make(map[Hash]ProofStep),
 	}
 
 	for _, d := range deletions {
-		update.Deleted[d.Leaf] = true
+		update.deleted[d.Leaf] = true
 
 		i, j, err := u.delHelper(w, d.Leaf, d.Steps, 0, nil)
 		if err != nil {
@@ -124,8 +124,8 @@ func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
 				w.heights = append(w.heights, nil)
 			}
 			w.heights[i+1] = append(w.heights[i+1], h)
-			update.Updated[a] = ProofStep{H: b, Left: false}
-			update.Updated[b] = ProofStep{H: a, Left: true}
+			update.updated[a] = ProofStep{H: b, Left: false}
+			update.updated[b] = ProofStep{H: a, Left: true}
 		}
 	}
 
@@ -213,15 +213,15 @@ func findRoot(root Hash, roots []Hash) (int, bool) {
 func (u Update) Proof(item Hash) Proof {
 	p := Proof{Leaf: item}
 	for {
-		s, ok := u.Updated[item]
+		s, ok := u.updated[item]
 		if !ok {
 			return p
 		}
 		p.Steps = append(p.Steps, s)
 		if s.Left {
-			item = u.U.hasher(s.H, item)
+			item = u.u.hasher(s.H, item)
 		} else {
-			item = u.U.hasher(item, s.H)
+			item = u.u.hasher(item, s.H)
 		}
 	}
 }
