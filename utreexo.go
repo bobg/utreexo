@@ -64,7 +64,6 @@ type worktree struct {
 // after the Utreexo changes.
 type Update struct {
 	u       *Utreexo
-	deleted map[Hash]bool
 	updated map[Hash]ProofStep
 }
 
@@ -92,13 +91,10 @@ func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
 
 	update := Update{
 		u:       u,
-		deleted: make(map[Hash]bool),
 		updated: make(map[Hash]ProofStep),
 	}
 
 	for _, d := range deletions {
-		update.deleted[d.Leaf] = true
-
 		i, j, err := u.delHelper(w, d.Leaf, d.Steps, 0, nil)
 		if err != nil {
 			return update, err

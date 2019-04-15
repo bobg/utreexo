@@ -19,20 +19,11 @@ type (
 	}
 )
 
-var (
-	// ErrDeleted means a value has been deleted from the Utreexo and its proof cannot be updated.
-	ErrDeleted = errors.New("deleted")
-
-	// ErrInvalid means the proof is invalid.
-	ErrInvalid = errors.New("invalid proof")
-)
+// ErrInvalid means the proof is invalid.
+var ErrInvalid = errors.New("invalid proof")
 
 // Update updates the proof of inclusion for a value after the Utreexo has been updated.
 func (p *Proof) Update(u Update) error {
-	if u.deleted[p.Leaf] {
-		return ErrDeleted
-	}
-
 	h := p.Leaf
 	steps := p.Steps
 

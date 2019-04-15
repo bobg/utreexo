@@ -65,8 +65,8 @@ func TestUtreexo(t *testing.T) {
 
 	p10 := proofs[10] // make a duplicate to leave proofs[10] unaffected
 	err = p10.Update(upd)
-	if err != ErrDeleted {
-		t.Errorf("updating proof of deleted value: got error %v, want %s", err, ErrDeleted)
+	if err != ErrInvalid {
+		t.Errorf("updating proof of deleted value: got error %v, want %s", err, ErrInvalid)
 	}
 
 	saved := *u
