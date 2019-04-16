@@ -23,6 +23,7 @@ type (
 var ErrInvalid = errors.New("invalid proof")
 
 // Update updates the proof of inclusion for a value after the Utreexo has been updated.
+// In case of error, the proof is unaltered.
 func (p *Proof) Update(u Update) (err error) {
 	h := p.Leaf
 	steps := p.Steps
