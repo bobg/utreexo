@@ -209,7 +209,7 @@ func findRoot(root Hash, roots []Hash) (int, bool) {
 }
 
 // Proof produces the Proof for a newly added item after a call to Utreexo.Update.
-// If item is not one of items added in the call that produced this Update,
+// If item is not one of the items added in the call that produced this Update,
 // the resulting Proof will probably be invalid,
 // but there's a small chance it won't be.
 func (u Update) Proof(item Hash) Proof {
