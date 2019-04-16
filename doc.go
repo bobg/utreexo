@@ -1,4 +1,4 @@
-// Package utreexo is "dynamic accumulator" for utxos.
+// Package utreexo is a “dynamic accumulator” for utxos.
 //
 // The original design is due to Tadge Dryja.
 // See his talk at the 2019 MIT Bitcoin Expo: https://youtu.be/edRun-6ubCc.
