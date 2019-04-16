@@ -40,7 +40,8 @@ func (h Hash) String() string {
 type HashFunc func(Hash, Hash) Hash
 
 // Utreexo is a forest of perfectly full Merkle trees,
-// at most one of size 2^N for each N in 0..len(roots).
+// at most one of size 2^N for each N in 0..K
+// (where the total number of leaves is bounded by 2^K).
 type Utreexo struct {
 	roots  []*Hash
 	hasher HashFunc
