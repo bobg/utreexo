@@ -69,6 +69,10 @@ func TestUtreexo(t *testing.T) {
 		t.Errorf("updating proof of deleted value: got error %v, want %s", err, ErrInvalid)
 	}
 
+	if !reflect.DeepEqual(p10, proofs[10]) {
+		t.Error("error from Proof.Update altered the proof")
+	}
+
 	saved := *u
 
 	_, err = u.Update([]Proof{proofs[10]}, nil)

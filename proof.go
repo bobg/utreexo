@@ -23,11 +23,15 @@ type (
 var ErrInvalid = errors.New("invalid proof")
 
 // Update updates the proof of inclusion for a value after the Utreexo has been updated.
-func (p *Proof) Update(u Update) error {
+func (p *Proof) Update(u Update) (err error) {
 	h := p.Leaf
 	steps := p.Steps
 
-	defer func() { p.Steps = steps }()
+	defer func() {
+		if err == nil {
+			p.Steps = steps
+		}
+	}()
 
 	for i := 0; i <= len(steps); i++ {
 		if len(u.u.roots) > i && u.u.roots[i] != nil && *u.u.roots[i] == h {
