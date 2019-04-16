@@ -15,7 +15,8 @@ But this means individual users can impose arbitrarily high costs on the entire 
 simply by creating large numbers of low-denomination coins that everyone must track.
 
 The utreexo design places this tracking burden onto individual coin owners,
-instead of onto everyone else ­ while still permitting everyone else to check the validity of spends.
+instead of onto everyone else ­
+while still permitting everyone else to check the validity of spends.
 
 In a blockchain based on the utreexo design,
 nodes do not store all utxos.
@@ -50,7 +51,7 @@ the proof that B is in the tree is <A,left>.
 
 In a utreexo blockchain network,
 transactions do not merely specify the unique ID of the utxo they wish to spend:
-instead, they must specify its _proof_.
+they must also specify its _proof_.
 This allows nodes in the network both to check the validity of the utxo and to make the necessary changes to the Merkle trees involved.
 Those changes involve removing the spent utxos and reordering things to maintain the invariant of zero-or-one perfectly full Merkle binary trees of each size.
 At first glance this might seem impossible,
@@ -63,3 +64,5 @@ The owners of the utxos do not merely take on the burden of storing their proofs
 they must also keep them up to date as the blockchain’s set of perfectly full Merkle binary trees undergoes continuous transformation.
 Each update of the “utreexo” must therefore produce information that can be used to update those proofs,
 and an owner must ensure all such updates are applied to a utxo’s proof before trying to spend it.
+(However, as a service, a node may keep some number of those update records on hand,
+allowing it to update any stale proofs it receives before trying to apply them to the current utreexo.)
