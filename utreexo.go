@@ -133,7 +133,7 @@ func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
 	}
 
 	for i := len(w.heights) - 1; i >= 0; i-- {
-		if w.heights[i] != nil {
+		if len(w.heights[i]) > 0 {
 			break
 		}
 		w.heights = w.heights[:len(w.heights)-1]
