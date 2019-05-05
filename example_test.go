@@ -7,7 +7,7 @@ import (
 	"github.com/bobg/utreexo"
 )
 
-func ExampleUpdateProof() {
+func ExampleProof_Update() {
 	hasher := sha256.New()
 
 	hashfunc := func(a, b utreexo.Hash) utreexo.Hash {

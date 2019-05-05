@@ -63,3 +63,5 @@ The owners of the utxos do not merely take on the burden of storing their proofs
 they must also keep them up to date as the blockchain’s set of perfectly full Merkle binary trees undergoes continuous transformation.
 Each update of the “utreexo” must therefore produce information that can be used to update those proofs,
 and an owner must ensure all such updates are applied to a utxo’s proof before trying to spend it.
+
+See [Algorithm.md](Algorithm.md) for the workings of this implementation.
