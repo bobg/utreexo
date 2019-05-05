@@ -19,38 +19,29 @@ type (
 	}
 )
 
-var (
-	// ErrDeleted means a value has been deleted from the Utreexo and its proof cannot be updated.
-	ErrDeleted = errors.New("deleted")
-
-	// ErrInvalid means the proof is invalid.
-	ErrInvalid = errors.New("invalid proof")
-)
+// ErrInvalid means the proof is invalid.
+var ErrInvalid = errors.New("invalid proof")
 
 // Update updates the proof of inclusion for a value after the Utreexo has been updated.
+// In case of error
+// (i.e., the proof is invalid with respect to the Utreexo in u),
+// the proof may be incompletely updated and should be discarded.
 func (p *Proof) Update(u Update) error {
-	if u.deleted[p.Leaf] {
-		return ErrDeleted
-	}
-
 	h := p.Leaf
-	steps := p.Steps
 
-	defer func() { p.Steps = steps }()
-
-	for i := 0; i <= len(steps); i++ {
+	for i := 0; i <= len(p.Steps); i++ {
 		if len(u.u.roots) > i && u.u.roots[i] != nil && *u.u.roots[i] == h {
-			steps = steps[:i]
+			p.Steps = p.Steps[:i]
 			return nil
 		}
 		var step ProofStep
 		if s, ok := u.updated[h]; ok {
 			step = s
-			steps = append(steps[:i], step)
-		} else if i == len(steps) {
+			p.Steps = append(p.Steps[:i], step)
+		} else if i == len(p.Steps) {
 			break
 		} else {
-			step = steps[i]
+			step = p.Steps[i]
 		}
 		if step.Left {
 			h = u.u.hasher(step.H, h)

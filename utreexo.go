@@ -40,7 +40,8 @@ func (h Hash) String() string {
 type HashFunc func(Hash, Hash) Hash
 
 // Utreexo is a forest of perfectly full Merkle trees,
-// at most one of size 2^N for each N in 0..len(roots).
+// at most one of size 2^N for each N in 0..K
+// (where the total number of leaves is bounded by 2^K).
 type Utreexo struct {
 	roots  []*Hash
 	hasher HashFunc
@@ -64,7 +65,6 @@ type worktree struct {
 // after the Utreexo changes.
 type Update struct {
 	u       *Utreexo
-	deleted map[Hash]bool
 	updated map[Hash]ProofStep
 }
 
@@ -92,13 +92,10 @@ func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
 
 	update := Update{
 		u:       u,
-		deleted: make(map[Hash]bool),
 		updated: make(map[Hash]ProofStep),
 	}
 
 	for _, d := range deletions {
-		update.deleted[d.Leaf] = true
-
 		i, j, err := u.delHelper(w, d.Leaf, d.Steps, 0, nil)
 		if err != nil {
 			return update, err
@@ -136,7 +133,7 @@ func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
 	}
 
 	for i := len(w.heights) - 1; i >= 0; i-- {
-		if w.heights[i] != nil {
+		if len(w.heights[i]) > 0 {
 			break
 		}
 		w.heights = w.heights[:len(w.heights)-1]
@@ -213,7 +210,7 @@ func findRoot(root Hash, roots []Hash) (int, bool) {
 }
 
 // Proof produces the Proof for a newly added item after a call to Utreexo.Update.
-// If item is not one of items added in the call that produced this Update,
+// If item is not one of the items added in the call that produced this Update,
 // the resulting Proof will probably be invalid,
 // but there's a small chance it won't be.
 func (u Update) Proof(item Hash) Proof {

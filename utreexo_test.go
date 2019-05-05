@@ -63,6 +63,12 @@ func TestUtreexo(t *testing.T) {
 	t.Logf("after deletion of %s, tree:\n%s", proofs[10].Leaf, spew.Sdump(u))
 	t.Logf("proofs:\n%s", spew.Sdump(proofs[:10]))
 
+	p10 := proofs[10] // make a duplicate to leave proofs[10] unaffected
+	err = p10.Update(upd)
+	if err != ErrInvalid {
+		t.Errorf("updating proof of deleted value: got error %v, want %s", err, ErrInvalid)
+	}
+
 	saved := *u
 
 	_, err = u.Update([]Proof{proofs[10]}, nil)
