@@ -2,7 +2,7 @@
 
 This document is an abstract specification for Utreexo algorithms and data structures.
 
-*[NOTE: this is a draft. Also it has diverged from the implementation, which must now be updated.]*
+**[NOTE: this is a draft.]**
 
 ## Terminology
 
@@ -27,8 +27,8 @@ These must be suitable as input to a Utreexo’s hasher but are otherwise unspec
 
 ### Update record
 
-An _update record_ is a pair `<deletions, nodes>`,
-where `deletions` is a set of hashes and `nodes` is a set of `<hash, proofstep>` pairs.
+An _update record_ is a set of `<hash, proofstep>` pairs,
+where `proofstep` is a Merkle Proof Step.
 
 ### Merkle Proof Step
 
@@ -78,25 +78,25 @@ Notes:
   before permitting deletion.
 
 Procedure:
-1. Let `r` be a new [update record](#update-record) with empty `deletions` and `nodes`.
+1. Let `r` be a new, empty [update record](#update-record).
 2. For each proof `p` in `deletions`:
-    1. Append `p.leaf` to `r.deletions`.
-    2. Let `height` be 0.
-    3. Let `n` be the number of steps in `p`.
-    4. Let `h` be `p.leaf`.
-    5. Repeat the following:
+    1. Let `height` be 0.
+    2. Let `n` be the number of steps in `p`.
+    3. Let `h` be `p.leaf`.
+    4. Repeat the following:
         1. If `h` is in `u.roots[height]`, remove it
            (preserving the order of remaining elements in `u.roots[height]`)
            and exit the loop.
         2. If `height >= n` fail (`p` fails verification).
-        3. Append `s.hash` to `u.roots[height]`.
-        4. If `s.side` is `left`, set `hash´` to `u.hasher(s.hash, h)`.
-        5. Otherwise, `s.side` is `right`. Set `hash´` to `u.hasher(h, s.hash)`.
-        6. Set `hash` to `hash´`.
-        7. Set `height` to `height+1`.
+        3. Let `s` be `p.steps[height]`.
+        4. Append `s.hash` to `u.roots[height]`.
+        5. If `s.side` is `left`, set `hash´` to `u.hasher(s.hash, h)`.
+        6. Otherwise, `s.side` is `right`. Set `hash´` to `u.hasher(h, s.hash)`.
+        7. Set `hash` to `hash´`.
+        8. Set `height` to `height+1`.
 3. For each hash `h` in `insertions`:
     1. Append `h` to `u.roots[0]`.
-4. _(Coalescing.)_ For each index `index` in `[0, u.roots.length]`:
+4. _(Coalescing.)_ For each index `index` in `[0, u.roots.length)`:
     1. While `u.roots[index].length > 1`:
         1. Let `a` and `b` be the last two elements of `u.roots[index]`.
         2. Decrease `u.roots[index].length` by 2.
@@ -104,8 +104,8 @@ Procedure:
         4. Append `h` to `u.roots[index+1]`.
         5. Let `sl` be a new [Merkle Proof Step](#merkle-proof-step) with `hash = a` and `side = left`.
         6. Let `sr` be a new Merkle Proof Step with `hash = b` and `side = right`.
-        7. Add `<left, sr>` to r.nodes.
-        8. Add `<right, sl>` to r.nodes.
+        7. Add `<left, sr>` to r.
+        8. Add `<right, sl>` to r.
 5. Return `r`.
 
 ### Construct proof
@@ -147,17 +147,16 @@ Input:
 
 Procedure:
 
-1. If `p.leaf` is in `r.deleted`, fail (leaf deleted).
-2. Let `h` be `p.leaf`.
-3. Let `i` be 0.
-4. Repeat the following:
+1. Let `h` be `p.leaf`.
+2. Let `i` be 0.
+3. Repeat the following:
     1. If `i` > `p.steps.length`, fail (invalid proof).
     2. If `u.roots[i]` is non-empty and `u.roots[i][0]` is `h`,
        then set `p.steps.length` to `i` and return.
-    3. If `r.nodes` contains the pair `<h, s>` for some step `s`, then:
+    3. If `r` contains the pair `<h, s>` for some step `s`, then:
         1. Set `p.steps.length` to `i`.
         2. Append `s` to `p.steps`.
-    4. Otherwise (if `r.nodes` does not contain the pair `<h, s>`):
+    4. Otherwise (if `r` does not contain the pair `<h, s>`):
         1. If `i == p.steps.length`, fail (invalid proof).
         2. Otherwise, let `s` be `p.steps[i]`.
     5. If `s.side` is `left`, set `h´` to `u.hasher(s.hash, h)`.

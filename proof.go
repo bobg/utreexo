@@ -43,11 +43,7 @@ func (p *Proof) Update(u Update) error {
 		} else {
 			step = p.Steps[i]
 		}
-		if step.Left {
-			h = u.u.hasher(step.H, h)
-		} else {
-			h = u.u.hasher(h, step.H)
-		}
+		h = u.u.parent(h, step)
 	}
 
 	return ErrInvalid

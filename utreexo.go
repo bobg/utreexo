@@ -54,11 +54,6 @@ func New(hasher HashFunc) *Utreexo {
 	}
 }
 
-type worktree struct {
-	heights [][]Hash     // heights[n] is a list of the roots of perfect subtrees with 2^N items
-	roots   map[Hash]int // index in heights where a hash can be found
-}
-
 // Update is the output of Utreexo.Update.
 // It contains information that can be used to update proofs
 // (via Proof.Update)
@@ -79,14 +74,10 @@ type Update struct {
 // that may have been affected by the changes to the Utreexo.
 // Note that this function never returns an error when len(deletions)==0.
 func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
-	w := &worktree{
-		roots:   make(map[Hash]int),
-		heights: make([][]Hash, len(u.roots)),
-	}
+	newRoots := make([][]Hash, len(u.roots))
 	for i, root := range u.roots {
 		if root != nil {
-			w.heights[i] = []Hash{*root}
-			w.roots[*root] = i
+			newRoots[i] = []Hash{*root}
 		}
 	}
 
@@ -96,50 +87,39 @@ func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
 	}
 
 	for _, d := range deletions {
-		i, j, err := u.delHelper(w, d.Leaf, d.Steps, 0, nil)
+		err := u.delHelper(d, &newRoots)
 		if err != nil {
 			return update, err
 		}
-
-		delete(w.roots, w.heights[i][j])
-		if j < len(w.heights[i])-1 {
-			w.heights[i][j] = w.heights[i][len(w.heights[i])-1]
-		}
-		w.heights[i] = w.heights[i][:len(w.heights[i])-1]
-
-		for k, s := range d.Steps {
-			w.heights[k] = append(w.heights[k], s.H)
-			w.roots[s.H] = k
-		}
 	}
 
-	if len(w.heights) == 0 {
-		w.heights = [][]Hash{nil}
+	if len(newRoots) == 0 {
+		newRoots = [][]Hash{nil}
 	}
-	w.heights[0] = append(w.heights[0], insertions...)
+	newRoots[0] = append(newRoots[0], insertions...)
 
-	for i := 0; i < len(w.heights); i++ {
-		for len(w.heights[i]) > 1 {
-			a, b := w.heights[i][len(w.heights[i])-2], w.heights[i][len(w.heights[i])-1]
-			w.heights[i] = w.heights[i][:len(w.heights[i])-2]
+	for i := 0; i < len(newRoots); i++ {
+		for len(newRoots[i]) > 1 {
+			a, b := newRoots[i][len(newRoots[i])-2], newRoots[i][len(newRoots[i])-1]
+			newRoots[i] = newRoots[i][:len(newRoots[i])-2]
 			h := u.hasher(a, b)
-			if len(w.heights) <= i+1 {
-				w.heights = append(w.heights, nil)
+			if len(newRoots) <= i+1 {
+				newRoots = append(newRoots, nil)
 			}
-			w.heights[i+1] = append(w.heights[i+1], h)
+			newRoots[i+1] = append(newRoots[i+1], h)
 			update.updated[a] = ProofStep{H: b, Left: false}
 			update.updated[b] = ProofStep{H: a, Left: true}
 		}
 	}
 
-	for i := len(w.heights) - 1; i >= 0; i-- {
-		if len(w.heights[i]) > 0 {
+	for i := len(newRoots) - 1; i >= 0; i-- {
+		if len(newRoots[i]) > 0 {
 			break
 		}
-		w.heights = w.heights[:len(w.heights)-1]
+		newRoots = newRoots[:len(newRoots)-1]
 	}
 
-	for i, h := range w.heights {
+	for i, h := range newRoots {
 		if len(u.roots) <= i {
 			u.roots = append(u.roots, nil)
 		}
@@ -149,55 +129,59 @@ func (u *Utreexo) Update(deletions []Proof, insertions []Hash) (Update, error) {
 			u.roots[i] = &h[0]
 		}
 	}
-	u.roots = u.roots[:len(w.heights)]
+	u.roots = u.roots[:len(newRoots)]
 
 	return update, nil
 }
 
-func (u *Utreexo) delHelper(w *worktree, item Hash, steps []ProofStep, height int, j *int) (int, int, error) {
-	if len(steps) == 0 {
-		if height >= len(u.roots) {
-			return 0, 0, ErrInvalid
-		}
-		if u.roots[height] == nil {
-			return 0, 0, ErrInvalid
-		}
-		if item != *u.roots[height] {
-			return 0, 0, ErrInvalid
-		}
-		if len(w.heights) == 0 {
-			return 0, 0, ErrInvalid
-		}
-		if j == nil {
-			jj, ok := findRoot(item, w.heights[0])
-			if !ok {
-				return 0, 0, ErrInvalid
+func (u *Utreexo) delHelper(p Proof, newRoots *[][]Hash) error {
+	if len(u.roots) <= len(p.Steps) || u.roots[len(p.Steps)] == nil {
+		return ErrInvalid
+	}
+
+	height := 0
+	hash := p.Leaf
+	for {
+		if height < len(*newRoots) {
+			if index, ok := findRoot(hash, (*newRoots)[height]); ok {
+				// Remove hash from newRoots.
+				(*newRoots)[height] = append((*newRoots)[height][:index], (*newRoots)[height][index+1:]...)
+
+				// If height < len(p.Steps),
+				// then an earlier deletion "opened up" u.roots[len(p.Steps)]
+				// and we just removed that subroot from newRoots.
+				// Now verify the remainder of p.Steps against the unmodified tree.
+				for {
+					if height >= len(p.Steps) {
+						if hash != *u.roots[height] {
+							return ErrInvalid
+						}
+						return nil
+					}
+					s := p.Steps[height]
+					hash = u.parent(hash, s)
+					height++
+				}
 			}
-			j = new(int)
-			*j = jj
 		}
-		return height, *j, nil
-	}
-
-	var newItem Hash
-	if steps[0].Left {
-		newItem = u.hasher(steps[0].H, item)
-	} else {
-		newItem = u.hasher(item, steps[0].H)
-	}
-
-	if j == nil {
-		if h, ok := w.roots[newItem]; ok {
-			k, ok := findRoot(newItem, w.heights[h])
-			if !ok {
-				return 0, 0, ErrInvalid
-			}
-			j = new(int)
-			*j = k
+		if height >= len(p.Steps) {
+			return ErrInvalid
 		}
+		for height >= len(*newRoots) {
+			*newRoots = append(*newRoots, nil)
+		}
+		s := p.Steps[height]
+		(*newRoots)[height] = append((*newRoots)[height], s.H)
+		hash = u.parent(hash, s)
+		height++
 	}
+}
 
-	return u.delHelper(w, newItem, steps[1:], height+1, j)
+func (u *Utreexo) parent(h Hash, s ProofStep) Hash {
+	if s.Left {
+		return u.hasher(s.H, h)
+	}
+	return u.hasher(h, s.H)
 }
 
 func findRoot(root Hash, roots []Hash) (int, bool) {
@@ -221,10 +205,6 @@ func (u Update) Proof(item Hash) Proof {
 			return p
 		}
 		p.Steps = append(p.Steps, s)
-		if s.Left {
-			item = u.u.hasher(s.H, item)
-		} else {
-			item = u.u.hasher(item, s.H)
-		}
+		item = u.u.parent(item, s)
 	}
 }
